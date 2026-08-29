@@ -608,9 +608,10 @@ async def seed_businesses() -> tuple[int, int]:
     """
     Insert businesses that don't already exist (matched by name).
     Returns (inserted_count, skipped_count).
-    """
-    await init_db()
 
+    Startup already initializes tables; do not recurse into init_db(), or the
+    app can spin into a circular seeding loop during warm starts.
+    """
     inserted = 0
     skipped = 0
 

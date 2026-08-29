@@ -2,12 +2,32 @@
 Async SQLAlchemy database engine, session factory, and base model.
 Supports SQLite (default) and PostgreSQL (set DATABASE_URL in .env).
 """
+from pathlib import Path
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from app.core.config import settings
+
+
+def _resolve_sqlite_url() -> str:
+    """Keep SQLite files anchored to the backend project directory.
+
+    This prevents local and hosted runs from creating different DB files depending on
+    the shell's current working directory.
+    """
+    if settings.DATABASE_URL.startswith("sqlite"):
+        relative = settings.DATABASE_URL.replace("sqlite+aiosqlite:///./", "", 1)
+        if relative != settings.DATABASE_URL:
+            return f"sqlite+aiosqlite:///{(settings.backend_root / relative).as_posix()}"
+        if settings.DATABASE_URL.startswith("sqlite+aiosqlite:///"):
+            raw_path = settings.DATABASE_URL.replace("sqlite+aiosqlite:///", "", 1)
+            path = Path(raw_path).expanduser()
+            if not path.is_absolute():
+                path = (settings.backend_root / path).resolve()
+            return f"sqlite+aiosqlite:///{path.as_posix()}"
+    return settings.DATABASE_URL
 
 # ---------------------------------------------------------------------------
 # Engine
@@ -16,8 +36,9 @@ from app.core.config import settings
 # PostgreSQL works without it, so we detect which DB we're using.
 _is_sqlite = settings.DATABASE_URL.startswith("sqlite")
 
+resolved_database_url = _resolve_sqlite_url()
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    resolved_database_url,
     echo=settings.ENVIRONMENT == "development",
     connect_args={"check_same_thread": False} if _is_sqlite else {},
 )
@@ -52,7 +73,11 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 # DB initialisation (called at app startup)
 # ---------------------------------------------------------------------------
 async def init_db() -> None:
-    """Create all tables if they do not already exist, then seed reference data."""
+    """Create all tables if they do not already exist.
+
+    Business/scheme seed data should be bootstrapped from startup code rather than
+    re-entering this function from inside seeders, which causes recursive loops.
+    """
     # Import models so that SQLAlchemy discovers them before create_all
     import app.models.user              # noqa: F401
     import app.models.business          # noqa: F401
@@ -94,7 +119,7 @@ async def init_db() -> None:
                 # Add as nullable text so existing rows remain valid.
                 await conn.execute(text("ALTER TABLE advisory_sessions ADD COLUMN canonical_query TEXT DEFAULT NULL"))
 
-    # Seed government schemes if the table is empty
-    from app.seed_schemes import seed_schemes
-    async with AsyncSessionLocal() as db:
-        await seed_schemes(db)
+    # Startup-level bootstrap is handled in app.main.lifespan(); keep init_db() as
+    # a database-creation primitive without re-triggering seeders recursively.
+    # Avoid side effects here to prevent duplicate startup loops when seeding.
+    return None

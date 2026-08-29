@@ -11,6 +11,7 @@ Rules:
   - Production enforces secure JWT secret.
 """
 import warnings
+from pathlib import Path
 from typing import List, Optional
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -35,6 +36,21 @@ class Settings(BaseSettings):
 
     # ── Database ───────────────────────────────────────────────────────────────
     DATABASE_URL: str = "sqlite+aiosqlite:///./ruralbiz.db"
+
+    @property
+    def backend_root(self) -> Path:
+        return Path(__file__).resolve().parents[1]
+
+    @property
+    def resolved_database_path(self) -> Path:
+        url = self.DATABASE_URL
+        if url.startswith("sqlite"):
+            if url.startswith("sqlite+aiosqlite:///./"):
+                return self.backend_root / url.replace("sqlite+aiosqlite:///./", "")
+            if url.startswith("sqlite+aiosqlite:///"):
+                db_path = url.replace("sqlite+aiosqlite:///", "", 1)
+                return Path(db_path).expanduser()
+        return self.backend_root / "ruralbiz.db"
 
     # ── JWT ───────────────────────────────────────────────────────────────────
     JWT_SECRET_KEY:              str = "change-me-to-a-long-random-secret"

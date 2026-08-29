@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
     # Initialize database and create tables
     await init_db()
 
-    # Automatically seed business database
+    # Automatically seed business database on startup, regardless of launch path
     try:
         from app.seed_businesses import seed_businesses
 

@@ -41,29 +41,16 @@ limiter = Limiter(
 async def lifespan(app: FastAPI):
     # Startup
     await init_db()
-
-    # Automatically seed businesses if the database is empty
-    try:
-        from app.seed_businesses import seed_businesses
-
-        inserted, skipped = await seed_businesses()
-
-        print(
-            f"Business database seeding completed: "
-            f"{inserted} inserted, {skipped} skipped"
-        )
-    except Exception as e:
-        print(f"Business database seeding error: {e}")
-
     from app.services.ai_service import ai_service
-
     log_startup(
         version=settings.APP_VERSION,
         environment=settings.ENVIRONMENT,
         db_url_masked=mask_db_url(settings.DATABASE_URL),
         ai_available=ai_service.is_available(),
     )
-
+    yield
+    # Shutdown
+    log_shutdown()
 
 
 # ── Application factory ───────────────────────────────────────────────────────

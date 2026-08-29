@@ -13,6 +13,7 @@ python-dotenv==1.0.1
 httpx==0.27.0
 email-validator==2.2.0
 slowapi==0.1.9
+langgraph
 # Phase 4 — Investment Optimization Engine
 ortools
 # Phase 5 — Market Intelligence (uses httpx already in Phase 1)

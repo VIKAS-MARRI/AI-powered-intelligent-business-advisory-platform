@@ -1,0 +1,59 @@
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+venv/
+.env/
+.venv/
+backend/.venv/
+**/__pycache__/
+
+# Node
+frontend/node_modules/
+node_modules/
+.npm/
+
+# Build outputs
+frontend/dist/
+dist/
+build/
+
+# Temporary/project scratch data
+tmp/
+.pytest_cache/
+*.tmp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+ruralbiz.db
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env.*.example
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/

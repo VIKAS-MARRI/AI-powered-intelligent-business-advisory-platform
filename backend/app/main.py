@@ -83,13 +83,15 @@ async def lifespan(app: FastAPI):
     # Initialize database and create tables
     await init_db()
 
-    # Automatically seed business database on startup, regardless of launch path
+    # Automatically seed business database on startup, regardless of launch path.
+    # This uses the same DATABASE_URL as the running app and runs only after the
+    # schema is initialized, avoiding circular startup re-entry.
     try:
-        from app.seed_businesses import seed_businesses
+        from app.seed_businesses import ensure_businesses_seeded
 
         print("Checking and seeding business database...")
 
-        inserted, skipped = await seed_businesses()
+        inserted, skipped = await ensure_businesses_seeded()
 
         print(
             f"Business database seeding completed: "

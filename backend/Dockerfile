@@ -34,5 +34,6 @@ USER ruralbiz
 # Render provides the PORT environment variable
 EXPOSE 8000
 
-# Start FastAPI application
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
+# Seed missing business data before startup and then run the API.
+# This keeps the production database populated without relying on local SQLite data.
+CMD ["sh", "-c", "python -m app.seed_businesses && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]

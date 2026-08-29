@@ -18,6 +18,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from sqlalchemy import select
+
+from app.core.config import settings
+from app.core.logging import mask_db_url
 from app.database.db import AsyncSessionLocal, init_db
 from app.models.business import Business
 
@@ -609,18 +612,21 @@ async def seed_businesses() -> tuple[int, int]:
     Insert businesses that don't already exist (matched by name).
     Returns (inserted_count, skipped_count).
 
-    Startup already initializes tables; do not recurse into init_db(), or the
-    app can spin into a circular seeding loop during warm starts.
+    This function is intentionally idempotent and production-safe: it only inserts
+    missing records and never reinitializes the DB schema. The schema is created
+    by init_db() before this function is called, usually from app startup or a
+    deployment preflight command.
     """
     inserted = 0
     skipped = 0
 
     async with AsyncSessionLocal() as session:
         for data in BUSINESSES:
-            result = await session.execute(
-                select(Business).where(Business.name == data["name"])
-            )
-            existing = result.scalar_one_or_none()
+            existing = (
+                await session.execute(
+                    select(Business.id).where(Business.name == data["name"])
+                )
+            ).scalar_one_or_none()
 
             if existing:
                 skipped += 1
@@ -635,8 +641,17 @@ async def seed_businesses() -> tuple[int, int]:
     return inserted, skipped
 
 
+async def ensure_businesses_seeded() -> tuple[int, int]:
+    """Initialize tables and then seed missing businesses in a single safe step."""
+    await init_db()
+    return await seed_businesses()
+
+
 if __name__ == "__main__":
     async def main():
+        print(f"Using DATABASE_URL={mask_db_url(settings.DATABASE_URL)}")
+        print("Initializing database tables...")
+        await init_db()
         print("Seeding business database...")
         inserted, skipped = await seed_businesses()
         print(f"Done: {inserted} inserted, {skipped} skipped (already existed)")

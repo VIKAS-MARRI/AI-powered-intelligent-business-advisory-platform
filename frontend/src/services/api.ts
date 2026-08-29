@@ -1,20 +1,22 @@
 /**
  * Axios API client.
- * All requests go to /api (proxied to http://localhost:8000 in dev via Vite).
  */
+
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL,
   headers: { 'Content-Type': 'application/json' },
 })
 
 // Attach JWT on every request if present in sessionStorage
 api.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('access_token')
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
   return config
 })
 
@@ -27,6 +29,7 @@ api.interceptors.response.use(
       sessionStorage.removeItem('user')
       window.location.href = '/login'
     }
+
     return Promise.reject(error)
   },
 )
